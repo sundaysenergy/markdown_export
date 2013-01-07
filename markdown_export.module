@@ -1,0 +1,111 @@
+<?php
+
+/**
+ * @file
+ * module for
+ *
+ * 
+ *
+ * @version
+ * 2013-01-07
+ *
+ * Code by Kai Curry [kai@sundaysenergy.com]
+ * For Sundays Energy [http://sundaysenergy.com]
+ */
+
+/**
+ *
+ */
+function markdown_export_menu() {
+  $items = array();
+  $items['markdown-export'] = array(
+    'title' => t('Markdown Export'),
+    'description' => 'Export nodes as markdown files.',
+    'access callback' => TRUE,
+    #'access arguments' => array('administer content'),
+    'page callback' => 'markdown_export_page',
+  );
+  return $items;
+}
+
+
+/**
+ * @return Return array of node ids to export.
+ */
+function markdown_export_nids($type = 'page') {
+  $sql = "SELECT nid, vid FROM {node} WHERE type = :type";
+  $result = db_query($sql, array(':type' => $type));
+  $nodes = array();
+  foreach ($result as $node) {
+    $nodes[$node->nid] = $node->vid;
+  }
+  return $nodes;
+}
+
+/*
+ *
+ */
+function markdown_export_page() {
+  $r = "<pre>";
+  $start = microtime(true);
+  $p = markdown_export_batch(markdown_export_nids('page'));
+  $r .= print_r($p, TRUE);
+  $r .= "</pre><br />";
+  $r .= number_format(microtime(true) - $start, 3);
+  return $r;
+}
+
+/**
+ *
+ */
+function markdown_export_batch($nids) {
+  $pages = array();
+  foreach ($nids as $nid => $vid) {
+    $pages[] = markdown_export_process($nid);
+  }
+  return $pages;
+}
+
+/**
+ *
+ */
+function markdown_export_process($nid) {
+  $path = 'node/' . $nid;
+  $alias = drupal_lookup_path('alias', $path);
+  if ($alias) {
+    $path = $alias;
+  }
+  $filename = $path . '.md';
+
+  $node = node_load($nid);
+  $yaml = array(
+    'title' => $node->title,
+    
+  );
+
+  $yaml_text = "---\n";
+  foreach ($yaml as $key => $line) {
+    $yaml_text .= $key . ' : ' . $line . "\n";
+  }
+  $yaml_text .= "---\n";
+  #return $yaml_text;
+  $body = $node->body[$node->language][0]['value'];
+  $body = markdown_export_markdownify($body);
+  $body .= 'body';
+
+  $file_contents = $yaml_text . $body;
+
+  #file_put_contents(, );
+  return $file_contents;
+}
+
+/**
+ *
+ */
+function markdown_export_markdownify($string) {
+  markdownify_include();
+  $markdownify = new Markdownify();
+  // Process with pre and post process alter invocations
+  $output = $markdownify->parseString($string);
+  return $output;
+}

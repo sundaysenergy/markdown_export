@@ -1,0 +1,7 @@
+name = Markdown Export
+description = Export your Drupal nodes to markdown format. Saved to file system.
+package = Other
+version = 7.x
+core = 7.x
+dependencies[] = node
+dependencies[] = markdownify
